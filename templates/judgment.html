@@ -2,6 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>判決內容 #{{ index }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -23,6 +24,7 @@
             white-space: pre-wrap;
             line-height: 1.6;
             font-size: 16px;
+            font-family: "Arial Unicode MS", "Microsoft JhengHei", "Heiti TC", "LiHei Pro", sans-serif;
         }
         .judgment-meta {
             background-color: #f5f5f5;
@@ -46,6 +48,23 @@
             color: white;
             border-radius: 4px;
             text-decoration: none;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: inherit;
+            overflow: auto;
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+        }
+        .error-message {
+            color: #d9534f;
+            background-color: #f2dede;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
         }
     </style>
 </head>
@@ -78,52 +97,88 @@
 
             <div class="judgment-content">
                 {% if judgment.content %}
-                    <!-- 內容以 content 欄位形式存在 -->
                     <div class="judgment-section">
-                        <pre>{{ judgment.content }}</pre>
+                        <div id="judgment-text">{{ judgment.content|safe }}</div>
                     </div>
                 {% elif judgment.full_text %}
-                    <!-- 內容以 full_text 欄位形式存在 -->
                     <div class="judgment-section">
-                        <pre>{{ judgment.full_text }}</pre>
+                        <div id="judgment-text">{{ judgment.full_text|safe }}</div>
                     </div>
                 {% elif judgment.text %}
-                    <!-- 內容以 text 欄位形式存在 -->
                     <div class="judgment-section">
-                        <pre>{{ judgment.text }}</pre>
+                        <div id="judgment-text">{{ judgment.text|safe }}</div>
                     </div>
                 {% else %}
-                    <!-- 嘗試直接打印整個判決對象 -->
-                    <div class="judgment-section">
-                        <h3>判決內容</h3>
-                        <pre>{{ judgment|tojson(indent=2) }}</pre>
-                    </div>
+                    <!-- 嘗試遍歷所有字段並顯示長度超過100的文本內容 -->
+                    {% set found_content = false %}
+                    {% for key, value in judgment.items() %}
+                        {% if value is string and value|length > 100 %}
+                            {% set found_content = true %}
+                            <div class="judgment-section">
+                                <h3>{{ key }}</h3>
+                                <div id="judgment-text-{{ key }}">{{ value|safe }}</div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if not found_content %}
+                        <div class="judgment-section">
+                            <h3>判決內容</h3>
+                            <div id="judgment-data">{{ judgment|tojson(indent=2) }}</div>
+                        </div>
+                    {% endif %}
                 {% endif %}
             </div>
         {% else %}
             <div class="judgment-section">
-                <p>找不到判決內容或發生錯誤。</p>
+                <p class="error-message">找不到判決內容或發生錯誤。</p>
             </div>
         {% endif %}
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // 檢查內容是否為空
-            const contentElements = document.querySelectorAll('.judgment-section pre');
-            let hasContent = false;
-            
-            contentElements.forEach(element => {
-                if (element.textContent.trim().length > 0) {
-                    hasContent = true;
+            // 處理文本內容可能包含的HTML標籤
+            const judgmentTextElements = document.querySelectorAll('[id^="judgment-text"]');
+            judgmentTextElements.forEach(element => {
+                // 檢查內容是否含有HTML標籤
+                const content = element.innerHTML;
+                if (content.trim().length === 0) {
+                    element.innerHTML = '<p class="error-message">內容為空</p>';
+                }
+                
+                // 如果內容看起來像HTML但未正確渲染，則用pre標籤包裹
+                if (content.includes('&lt;') && content.includes('&gt;')) {
+                    const pre = document.createElement('pre');
+                    pre.textContent = content;
+                    element.innerHTML = '';
+                    element.appendChild(pre);
+                }
+                
+                // 檢查文本是否包含亂碼序列
+                if (/\\u[\dA-Fa-f]{4}|\\x[\dA-Fa-f]{2}/.test(content)) {
+                    try {
+                        // 嘗試解析Unicode轉義序列
+                        const decoded = JSON.parse('"' + content.replace(/"/g, '\\"') + '"');
+                        element.textContent = decoded;
+                    } catch (e) {
+                        console.error("解析Unicode失敗:", e);
+                    }
                 }
             });
-
-            if (!hasContent) {
-                // 如果沒有內容，顯示錯誤信息
-                const judgmentContent = document.querySelector('.judgment-content');
-                if (judgmentContent) {
-                    judgmentContent.innerHTML = '<div class="judgment-section"><p>判決內容為空或格式不支持。</p></div>';
+            
+            // 美化JSON顯示
+            const jsonElement = document.getElementById('judgment-data');
+            if (jsonElement) {
+                try {
+                    const jsonData = JSON.parse(jsonElement.textContent);
+                    const formattedJson = JSON.stringify(jsonData, null, 2);
+                    const pre = document.createElement('pre');
+                    pre.textContent = formattedJson;
+                    jsonElement.innerHTML = '';
+                    jsonElement.appendChild(pre);
+                } catch (e) {
+                    console.error("JSON解析失敗:", e);
                 }
             }
         });

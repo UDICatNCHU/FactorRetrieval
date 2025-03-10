@@ -81,6 +81,7 @@ def get_judgment_by_index(index):
         return None, f"錯誤: 找不到檔案 '{file_path}'"
     
     try:
+        # 確保以UTF-8編碼讀取
         with open(file_path, 'r', encoding='utf-8') as file:
             judgments = json.load(file)
         
@@ -90,11 +91,61 @@ def get_judgment_by_index(index):
             if 0 <= index < len(judgments):
                 judgment_data = judgments[index]
                 print(f"找到索引 {index} 的判決，數據類型: {type(judgment_data)}")
-                print(f"判決數據內容範例: {str(judgment_data)[:200]}...")
-                # 確保數據是一個字典
-                if not isinstance(judgment_data, dict):
-                    judgment_data = {"content": str(judgment_data)}
-                return judgment_data, None
+                
+                # 處理字典型態的判決數據
+                if isinstance(judgment_data, dict):
+                    # 檢查並確保所有文本字段都以UTF-8編碼存儲
+                    for key in judgment_data:
+                        if isinstance(judgment_data[key], str):
+                            # 檢測是否為無效UTF-8字符串(可能是亂碼來源)
+                            try:
+                                judgment_data[key].encode('utf-8').decode('utf-8')
+                            except UnicodeError:
+                                print(f"警告: 欄位 {key} 包含無效的UTF-8字符")
+                                # 嘗試用不同編碼解決亂碼問題
+                                try:
+                                    raw_str = judgment_data[key]
+                                    # 嘗試big5編碼
+                                    judgment_data[key] = raw_str.encode('latin1').decode('big5', errors='replace')
+                                except Exception:
+                                    # 如果失敗，至少確保它是有效的UTF-8
+                                    judgment_data[key] = judgment_data[key].encode('utf-8', errors='replace').decode('utf-8')
+                    
+                    # 如果沒有專門的文本欄位，檢查常見欄位名稱
+                    if not any(k in judgment_data for k in ['content', 'text', 'full_text']):
+                        # 尋找最長的字符串欄位作為主要內容
+                        max_len = 0
+                        main_content_key = None
+                        for key, value in judgment_data.items():
+                            if isinstance(value, str) and len(value) > max_len:
+                                max_len = len(value)
+                                main_content_key = key
+                        
+                        if main_content_key:
+                            judgment_data['content'] = judgment_data[main_content_key]
+                            print(f"使用 {main_content_key} 欄位作為主要內容")
+                    
+                    return judgment_data, None
+                
+                # 處理字符串型態的判決數據
+                elif isinstance(judgment_data, str):
+                    print(f"判決數據是字符串，長度: {len(judgment_data)}")
+                    try:
+                        # 檢查是否為有效UTF-8字符串
+                        judgment_data.encode('utf-8').decode('utf-8')
+                    except UnicodeError:
+                        print("警告: 判決內容包含無效的UTF-8字符")
+                        try:
+                            # 嘗試big5編碼
+                            judgment_data = judgment_data.encode('latin1').decode('big5', errors='replace')
+                        except Exception:
+                            # 如果失敗，至少確保它是有效的UTF-8
+                            judgment_data = judgment_data.encode('utf-8', errors='replace').decode('utf-8')
+                    return {"content": judgment_data}, None
+                
+                else:
+                    print(f"判決數據類型不支持: {type(judgment_data)}")
+                    return {"content": str(judgment_data)}, None
             else:
                 print(f"錯誤: 索引 {index} 超出範圍 (0-{len(judgments)-1})")
                 return None, f"錯誤: 索引 {index} 超出範圍"
@@ -165,6 +216,18 @@ def judgment(index):
     if not judgment_data or (isinstance(judgment_data, dict) and not judgment_data):
         flash("錯誤: 找到的判決數據為空")
         return redirect(url_for('index'))
+    
+    # 處理可能的編碼問題
+    if isinstance(judgment_data, dict):
+        for key, value in judgment_data.items():
+            if isinstance(value, str):
+                # 檢查是否包含可能的亂碼序列
+                if '\\u' in value or '\\x' in value:
+                    try:
+                        # 嘗試解碼轉義序列
+                        judgment_data[key] = bytes(value, 'utf-8').decode('unicode_escape')
+                    except Exception:
+                        pass
     
     return render_template('judgment.html', judgment=judgment_data, index=index)
 
