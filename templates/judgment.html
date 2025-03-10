@@ -1,0 +1,92 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="card border-0 shadow-lg">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h2 class="mb-0"><i class="fas fa-gavel"></i> 判決詳情 (索引: {{ index }})</h2>
+        <div>
+            <a href="{{ url_for('index') }}" class="btn btn-outline-light btn-sm me-2">
+                <i class="fas fa-home"></i> 返回首頁
+            </a>
+            <button class="btn btn-outline-light btn-sm" onclick="history.back()">
+                <i class="fas fa-arrow-left"></i> 返回上頁
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if judgment %}
+            <div class="judgment-container">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="judgment-info-card">
+                            <h5><i class="fas fa-landmark"></i> 判決基本資訊</h5>
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th class="bg-light">被告</th>
+                                    <td>{{ judgment.defendant }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">案件編號</th>
+                                    <td>{{ judgment.case_id }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">判決日期</th>
+                                    <td>{{ judgment.date }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">法院</th>
+                                    <td>{{ judgment.court }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="judgment-info-card">
+                            <h5><i class="fas fa-balance-scale"></i> 判決結果</h5>
+                            <div class="sentence-result">
+                                {% if judgment.sentence %}
+                                    <div class="alert alert-danger">
+                                        <strong>刑期:</strong> {{ judgment.sentence }}
+                                    </div>
+                                {% else %}
+                                    <div class="alert alert-secondary">無刑期資訊</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <h5 class="judgment-section-title"><i class="fas fa-list-ul"></i> 相關因素</h5>
+                    <div class="factors-container">
+                        {% if judgment.factors %}
+                            <div class="row">
+                                {% for factor in judgment.factors %}
+                                    <div class="col-md-4 mb-2">
+                                        <div class="factor-badge">
+                                            <i class="fas fa-tag"></i> {{ factor }}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="alert alert-secondary">無因素資訊</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="judgment-content">
+                    <h5 class="judgment-section-title"><i class="fas fa-file-alt"></i> 判決內容</h5>
+                    <div class="judgment-text bg-light p-4 rounded">
+                        {{ judgment.content|safe|replace('\n', '<br>') }}
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> 無法找到此判決資料
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

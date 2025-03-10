@@ -1,0 +1,172 @@
+/* 全局樣式 */
+body {
+    font-family: 'Microsoft JhengHei', 'Apple LiGothic Medium', sans-serif;
+    background-color: #f8f9fa;
+    color: #333;
+}
+
+/* 導航欄 */
+.navbar-brand i {
+    margin-right: 8px;
+}
+
+/* 卡片樣式 */
+.card {
+    border-radius: 15px;
+    overflow: hidden;
+    margin-bottom: 25px;
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card-header {
+    padding: 15px 20px;
+}
+
+.card-header h2, .card-header h3 {
+    font-weight: 600;
+}
+
+.card-header i {
+    margin-right: 10px;
+}
+
+/* 因素選擇器 */
+.factor-selector select {
+    min-height: 250px;
+    border-radius: 8px;
+    border: 1px solid #ced4da;
+}
+
+.factor-selector select option {
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.factor-selector select option:hover {
+    background-color: #f0f0f0;
+}
+
+/* 按鈕樣式 */
+.btn {
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn i {
+    margin-right: 8px;
+}
+
+.btn-lg {
+    padding: 12px 30px;
+    font-size: 18px;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* 使用指南 */
+.guide-list {
+    padding-left: 20px;
+}
+
+.guide-list li {
+    margin-bottom: 10px;
+    line-height: 1.6;
+}
+
+/* 結果頁面 */
+.result-row {
+    transition: all 0.2s ease;
+}
+
+.result-row:hover {
+    background-color: #f2f9ff;
+}
+
+/* 判決詳情頁 */
+.judgment-container {
+    padding: 10px;
+}
+
+.judgment-info-card {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 10px;
+    height: 100%;
+}
+
+.judgment-info-card h5 {
+    border-bottom: 2px solid #dee2e6;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    color: #495057;
+}
+
+.judgment-section-title {
+    background-color: #e9ecef;
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    color: #495057;
+}
+
+.judgment-text {
+    white-space: pre-line;
+    line-height: 1.8;
+    border-left: 4px solid #007bff;
+    font-size: 1.05em;
+}
+
+.factor-badge {
+    background-color: #e9f5ff;
+    border-left: 4px solid #007bff;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    transition: all 0.2s ease;
+}
+
+.factor-badge:hover {
+    background-color: #d0e8ff;
+}
+
+.factor-badge i {
+    color: #007bff;
+    margin-right: 8px;
+}
+
+.sentence-result {
+    font-size: 1.2em;
+    text-align: center;
+    padding: 10px;
+}
+
+/* 頁腳 */
+.footer {
+    margin-top: 50px;
+    border-top: 1px solid #dee2e6;
+}
+
+/* 響應式調整 */
+@media (max-width: 768px) {
+    .card-header {
+        padding: 12px 15px;
+    }
+    
+    .factor-selector select {
+        min-height: 200px;
+    }
+    
+    .btn-lg {
+        padding: 10px 20px;
+        font-size: 16px;
+    }
+}
