@@ -1,92 +1,132 @@
-{% extends 'layout.html' %}
-
-{% block content %}
-<div class="card border-0 shadow-lg">
-    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-        <h2 class="mb-0"><i class="fas fa-gavel"></i> 判決詳情 (索引: {{ index }})</h2>
-        <div>
-            <a href="{{ url_for('index') }}" class="btn btn-outline-light btn-sm me-2">
-                <i class="fas fa-home"></i> 返回首頁
-            </a>
-            <button class="btn btn-outline-light btn-sm" onclick="history.back()">
-                <i class="fas fa-arrow-left"></i> 返回上頁
-            </button>
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>判決內容 #{{ index }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .judgment-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .judgment-header {
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .judgment-content {
+            white-space: pre-wrap;
+            line-height: 1.6;
+            font-size: 16px;
+        }
+        .judgment-meta {
+            background-color: #f5f5f5;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .judgment-section {
+            margin-bottom: 15px;
+        }
+        .judgment-section h3 {
+            color: #333;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+        .back-link {
+            display: inline-block;
+            margin: 20px 0;
+            padding: 10px 15px;
+            background-color: #2c3e50;
+            color: white;
+            border-radius: 4px;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="judgment-container">
+        <div class="judgment-header">
+            <h1>判決內容 #{{ index }}</h1>
+            <a href="{{ url_for('index') }}" class="back-link">返回搜尋</a>
         </div>
-    </div>
-    <div class="card-body">
+
         {% if judgment %}
-            <div class="judgment-container">
-                <div class="row mb-4">
-                    <div class="col-md-6">
-                        <div class="judgment-info-card">
-                            <h5><i class="fas fa-landmark"></i> 判決基本資訊</h5>
-                            <table class="table table-bordered">
-                                <tr>
-                                    <th class="bg-light">被告</th>
-                                    <td>{{ judgment.defendant }}</td>
-                                </tr>
-                                <tr>
-                                    <th class="bg-light">案件編號</th>
-                                    <td>{{ judgment.case_id }}</td>
-                                </tr>
-                                <tr>
-                                    <th class="bg-light">判決日期</th>
-                                    <td>{{ judgment.date }}</td>
-                                </tr>
-                                <tr>
-                                    <th class="bg-light">法院</th>
-                                    <td>{{ judgment.court }}</td>
-                                </tr>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="judgment-info-card">
-                            <h5><i class="fas fa-balance-scale"></i> 判決結果</h5>
-                            <div class="sentence-result">
-                                {% if judgment.sentence %}
-                                    <div class="alert alert-danger">
-                                        <strong>刑期:</strong> {{ judgment.sentence }}
-                                    </div>
-                                {% else %}
-                                    <div class="alert alert-secondary">無刑期資訊</div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div class="judgment-meta">
+                <!-- 顯示判決元數據 -->
+                {% if judgment.court_name %}
+                    <p><strong>法院:</strong> {{ judgment.court_name }}</p>
+                {% endif %}
+                
+                {% if judgment.date %}
+                    <p><strong>日期:</strong> {{ judgment.date }}</p>
+                {% endif %}
+                
+                {% if judgment.case_number %}
+                    <p><strong>案號:</strong> {{ judgment.case_number }}</p>
+                {% endif %}
 
-                <div class="mb-4">
-                    <h5 class="judgment-section-title"><i class="fas fa-list-ul"></i> 相關因素</h5>
-                    <div class="factors-container">
-                        {% if judgment.factors %}
-                            <div class="row">
-                                {% for factor in judgment.factors %}
-                                    <div class="col-md-4 mb-2">
-                                        <div class="factor-badge">
-                                            <i class="fas fa-tag"></i> {{ factor }}
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <div class="alert alert-secondary">無因素資訊</div>
-                        {% endif %}
-                    </div>
-                </div>
+                {% if judgment.title %}
+                    <p><strong>標題:</strong> {{ judgment.title }}</p>
+                {% endif %}
+            </div>
 
-                <div class="judgment-content">
-                    <h5 class="judgment-section-title"><i class="fas fa-file-alt"></i> 判決內容</h5>
-                    <div class="judgment-text bg-light p-4 rounded">
-                        {{ judgment.content|safe|replace('\n', '<br>') }}
+            <div class="judgment-content">
+                {% if judgment.content %}
+                    <!-- 內容以 content 欄位形式存在 -->
+                    <div class="judgment-section">
+                        <pre>{{ judgment.content }}</pre>
                     </div>
-                </div>
+                {% elif judgment.full_text %}
+                    <!-- 內容以 full_text 欄位形式存在 -->
+                    <div class="judgment-section">
+                        <pre>{{ judgment.full_text }}</pre>
+                    </div>
+                {% elif judgment.text %}
+                    <!-- 內容以 text 欄位形式存在 -->
+                    <div class="judgment-section">
+                        <pre>{{ judgment.text }}</pre>
+                    </div>
+                {% else %}
+                    <!-- 嘗試直接打印整個判決對象 -->
+                    <div class="judgment-section">
+                        <h3>判決內容</h3>
+                        <pre>{{ judgment|tojson(indent=2) }}</pre>
+                    </div>
+                {% endif %}
             </div>
         {% else %}
-            <div class="alert alert-warning">
-                <i class="fas fa-exclamation-triangle"></i> 無法找到此判決資料
+            <div class="judgment-section">
+                <p>找不到判決內容或發生錯誤。</p>
             </div>
         {% endif %}
     </div>
-</div>
-{% endblock %}
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 檢查內容是否為空
+            const contentElements = document.querySelectorAll('.judgment-section pre');
+            let hasContent = false;
+            
+            contentElements.forEach(element => {
+                if (element.textContent.trim().length > 0) {
+                    hasContent = true;
+                }
+            });
+
+            if (!hasContent) {
+                // 如果沒有內容，顯示錯誤信息
+                const judgmentContent = document.querySelector('.judgment-content');
+                if (judgmentContent) {
+                    judgmentContent.innerHTML = '<div class="judgment-section"><p>判決內容為空或格式不支持。</p></div>';
+                }
+            }
+        });
+    </script>
+</body>
+</html>

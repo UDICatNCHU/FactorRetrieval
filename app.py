@@ -84,23 +84,38 @@ def get_judgment_by_index(index):
         with open(file_path, 'r', encoding='utf-8') as file:
             judgments = json.load(file)
         
+        print(f"讀取判決檔案成功，數據類型: {type(judgments)}")
+        
         if isinstance(judgments, list):
             if 0 <= index < len(judgments):
-                return judgments[index], None
+                judgment_data = judgments[index]
+                print(f"找到索引 {index} 的判決，數據類型: {type(judgment_data)}")
+                print(f"判決數據內容範例: {str(judgment_data)[:200]}...")
+                # 確保數據是一個字典
+                if not isinstance(judgment_data, dict):
+                    judgment_data = {"content": str(judgment_data)}
+                return judgment_data, None
             else:
                 print(f"錯誤: 索引 {index} 超出範圍 (0-{len(judgments)-1})")
                 return None, f"錯誤: 索引 {index} 超出範圍"
                 
         elif isinstance(judgments, dict):
-            # 確保索引作為字符串使用
-            str_index = str(index)
-            if str_index in judgments:
-                return judgments[str_index], None
-            else:
-                print(f"錯誤: 找不到索引 {index} 的判決")
-                return None, f"錯誤: 找不到索引 {index} 的判決"
+            # 嘗試不同的索引格式
+            possible_keys = [str(index), index, f"{index}"]
+            for key in possible_keys:
+                if key in judgments:
+                    judgment_data = judgments[key]
+                    print(f"找到索引 {key} 的判決，數據類型: {type(judgment_data)}")
+                    print(f"判決數據內容範例: {str(judgment_data)[:200]}...")
+                    # 確保數據是一個字典
+                    if not isinstance(judgment_data, dict):
+                        judgment_data = {"content": str(judgment_data)}
+                    return judgment_data, None
+            
+            print(f"錯誤: 找不到索引 {index} 的判決，可用索引: {list(judgments.keys())[:5]}...")
+            return None, f"錯誤: 找不到索引 {index} 的判決"
         else:
-            print("錯誤: JSON檔案結構不支援索引訪問")
+            print(f"錯誤: JSON檔案結構不支援索引訪問，類型為: {type(judgments)}")
             return None, "錯誤: JSON檔案結構不支援索引訪問"
             
     except json.JSONDecodeError:
@@ -142,6 +157,13 @@ def judgment(index):
     
     if error:
         flash(error)
+        return redirect(url_for('index'))
+    
+    print(f"判決數據鍵名: {judgment_data.keys() if isinstance(judgment_data, dict) else 'None'}")
+    
+    # 若判決數據為空或缺乏內容
+    if not judgment_data or (isinstance(judgment_data, dict) and not judgment_data):
+        flash("錯誤: 找到的判決數據為空")
         return redirect(url_for('index'))
     
     return render_template('judgment.html', judgment=judgment_data, index=index)
