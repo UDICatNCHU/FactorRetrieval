@@ -2,6 +2,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 import json
 import os
+import re
 
 app = Flask(__name__, static_folder='static')
 app.secret_key = 'your_secret_key'  # 用於flash消息
