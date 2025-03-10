@@ -205,6 +205,9 @@ def search():
 
 @app.route('/judgment/<int:index>')
 def judgment(index):
+    # 從查詢參數中獲取選定的因素
+    selected_factors = request.args.getlist('factors')
+    
     judgment_data, error = get_judgment_by_index(index)
     
     if error:
@@ -310,7 +313,7 @@ def judgment(index):
     # 確保判決索引顯示在數據中
     judgment_data['index'] = index
     
-    return render_template('judgment.html', judgment=judgment_data, index=index)
+    return render_template('judgment.html', judgment=judgment_data, index=index, selected_factors=selected_factors)
 
 @app.route('/debug')
 def debug_info():
