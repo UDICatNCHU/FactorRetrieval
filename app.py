@@ -219,15 +219,95 @@ def judgment(index):
     
     # 處理可能的編碼問題
     if isinstance(judgment_data, dict):
+        # 確保判決數據中有必要的結構化資訊
+        if 'content' not in judgment_data and isinstance(judgment_data.get('fulltext'), str):
+            judgment_data['content'] = judgment_data['fulltext']
+        
+        # 處理編碼和結構
         for key, value in judgment_data.items():
             if isinstance(value, str):
                 # 檢查是否包含可能的亂碼序列
                 if '\\u' in value or '\\x' in value:
                     try:
-                        # 嘗試解碼轉義序列
                         judgment_data[key] = bytes(value, 'utf-8').decode('unicode_escape')
                     except Exception:
                         pass
+                        
+                # 格式化和美化文本
+                if key in ['content', 'fact', 'reason', 'mainText']:
+                    # 替換換行符為HTML換行
+                    judgment_data[key] = value.replace('\n', '<br>')
+                    
+        # 從判決內容中提取結構化信息
+        if 'content' in judgment_data and ('fact' not in judgment_data or 'reason' not in judgment_data):
+            content = judgment_data['content']
+            
+            # 提取事實、理由和主文
+            fact_match = None
+            reason_match = None
+            
+            # 常見的分段標記
+            fact_patterns = ['事實及理由', '事實', '事  實']
+            reason_patterns = ['理由', '理  由']
+            main_patterns = ['主文', '主  文']
+            
+            # 尋找事實部分
+            for pattern in fact_patterns:
+                if pattern in content:
+                    parts = content.split(pattern, 1)
+                    if len(parts) > 1:
+                        fact_match = pattern
+                        break
+            
+            # 尋找理由部分
+            for pattern in reason_patterns:
+                if pattern in content:
+                    parts = content.split(pattern, 1)
+                    if len(parts) > 1:
+                        reason_match = pattern
+                        break
+            
+            # 提取並設置結構化內容
+            if fact_match and reason_match:
+                fact_start = content.find(fact_match) + len(fact_match)
+                reason_start = content.find(reason_match)
+                
+                if reason_start > fact_start:
+                    judgment_data['fact'] = content[fact_start:reason_start].strip()
+                    judgment_data['reason'] = content[reason_start + len(reason_match):].strip()
+            
+            # 提取主文
+            for pattern in main_patterns:
+                if pattern in content:
+                    main_part = content.split(pattern, 1)[1].split(fact_match)[0] if fact_match in content else ""
+                    if main_part:
+                        judgment_data['mainText'] = main_part.strip()
+                        break
+                        
+        # 提取判決基本資訊
+        if 'content' in judgment_data:
+            content = judgment_data['content']
+            
+            # 提取法院名稱
+            if 'court' not in judgment_data:
+                court_match = re.search(r'(.*?)(地方法院|高等法院|最高法院)', content[:200])
+                if court_match:
+                    judgment_data['court'] = court_match.group(0)
+            
+            # 提取案號
+            if 'case_number' not in judgment_data:
+                case_match = re.search(r'[\u4e00-\u9fff]+\s*[\u4e00-\u9fff]*\s*字\s*第\s*\d+\s*號', content[:500])
+                if case_match:
+                    judgment_data['case_number'] = case_match.group(0)
+            
+            # 提取日期
+            if 'date' not in judgment_data:
+                date_match = re.search(r'中華民國\s*\d+\s*年\s*\d+\s*月\s*\d+\s*日', content[:500])
+                if date_match:
+                    judgment_data['date'] = date_match.group(0)
+    
+    # 確保判決索引顯示在數據中
+    judgment_data['index'] = index
     
     return render_template('judgment.html', judgment=judgment_data, index=index)
 
