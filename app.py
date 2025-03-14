@@ -304,7 +304,23 @@ def extract_judgment_structure(judgment_data):
             if reason_position > fact_position:
                 fact_end = reason_position
             
-            judgment_data['fact'] = content[fact_start:fact_end].strip()
+            # 獲取原始事實文本
+            fact_text = content[fact_start:fact_end].strip()
+            
+            # 使用正則表達式進行格式化
+            # 處理中文編號 (一、二、三、etc.)
+            fact_text = re.sub(r'([一二三四五六七八九十]+、)', r'<br><br>\1', fact_text)
+            
+            # 處理數字編號 (1. 2. 等)
+            fact_text = re.sub(r'(\d+[.．、])', r'<br><br>\1', fact_text)
+            
+            # 保留原有段落
+            fact_text = re.sub(r'\n+', '<br><br>', fact_text)
+            
+            # 讓句號後面增加換行以增加可讀性
+            fact_text = re.sub(r'([。！？])', r'\1<br>', fact_text)
+            
+            judgment_data['fact'] = fact_text
         
         # 提取理由部分
         if reason_match:
