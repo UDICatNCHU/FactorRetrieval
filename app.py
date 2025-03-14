@@ -239,48 +239,77 @@ def extract_judgment_structure(judgment_data):
     content = judgment_data['content']
     
     # 提取結構化信息
-    if 'fact' not in judgment_data or 'reason' not in judgment_data:
+    if 'fact' not in judgment_data or 'reason' not in judgment_data or 'mainText' not in judgment_data:
         # 提取事實、理由和主文
         fact_match = None
         reason_match = None
+        main_match = None
         
         # 常見的分段標記
         fact_patterns = ['事實及理由', '事實', '事  實']
         reason_patterns = ['理由', '理  由']
         main_patterns = ['主文', '主  文']
         
-        # 尋找事實部分
+        # 找出各部分標記在文本中的位置
+        fact_position = -1
+        reason_position = -1
+        main_position = -1
+        
+        # 尋找事實部分位置
         for pattern in fact_patterns:
-            if pattern in content:
-                parts = content.split(pattern, 1)
-                if len(parts) > 1:
-                    fact_match = pattern
-                    break
+            pos = content.find(pattern)
+            if pos != -1:
+                fact_match = pattern
+                fact_position = pos
+                break
         
-        # 尋找理由部分
+        # 尋找理由部分位置
         for pattern in reason_patterns:
-            if pattern in content:
-                parts = content.split(pattern, 1)
-                if len(parts) > 1:
-                    reason_match = pattern
-                    break
+            pos = content.find(pattern)
+            if pos != -1:
+                reason_match = pattern
+                reason_position = pos
+                break
         
-        # 提取並設置結構化內容
-        if fact_match and reason_match:
-            fact_start = content.find(fact_match) + len(fact_match)
-            reason_start = content.find(reason_match)
-            
-            if reason_start > fact_start:
-                judgment_data['fact'] = content[fact_start:reason_start].strip()
-                judgment_data['reason'] = content[reason_start + len(reason_match):].strip()
-        
-        # 提取主文
+        # 尋找主文部分位置
         for pattern in main_patterns:
-            if pattern in content:
-                main_part = content.split(pattern, 1)[1].split(fact_match)[0] if fact_match in content else ""
-                if main_part:
-                    judgment_data['mainText'] = main_part.strip()
-                    break
+            pos = content.find(pattern)
+            if pos != -1:
+                main_match = pattern
+                main_position = pos
+                break
+        
+        # 提取主文部分 - 獨立處理
+        if main_match:
+            main_start = main_position + len(main_match)
+            main_end = len(content)
+            
+            # 確定主文結束位置 (找到下一個最近的段落標記)
+            next_section_pos = []
+            if fact_position > main_position:
+                next_section_pos.append(fact_position)
+            if reason_position > main_position:
+                next_section_pos.append(reason_position)
+                
+            if next_section_pos:
+                main_end = min(next_section_pos)
+            
+            judgment_data['mainText'] = content[main_start:main_end].strip()
+        
+        # 提取事實部分
+        if fact_match:
+            fact_start = fact_position + len(fact_match)
+            fact_end = len(content)
+            
+            if reason_position > fact_position:
+                fact_end = reason_position
+            
+            judgment_data['fact'] = content[fact_start:fact_end].strip()
+        
+        # 提取理由部分
+        if reason_match:
+            reason_start = reason_position + len(reason_match)
+            judgment_data['reason'] = content[reason_start:].strip()
     
     return judgment_data
 
