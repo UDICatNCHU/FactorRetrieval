@@ -325,7 +325,26 @@ def extract_judgment_structure(judgment_data):
         # 提取理由部分
         if reason_match:
             reason_start = reason_position + len(reason_match)
-            judgment_data['reason'] = content[reason_start:].strip()
+            reason_text = content[reason_start:].strip()
+            
+            # 使用正則表達式進行格式化
+            # 處理中文編號 (一、二、三、etc.)
+            reason_text = re.sub(r'([一二三四五六七八九十]+、)', r'<br><br>\1', reason_text)
+            
+            # 處理數字編號 (1. 2. 等)
+            reason_text = re.sub(r'(\d+[.．、])', r'<br><br>\1', reason_text)
+            
+            # 處理層級符號編號
+            reason_text = re.sub(r'([\(（][一二三四五六七八九十]+[\)）])', r'<br><br>\1', reason_text)
+            reason_text = re.sub(r'([\(（]\d+[\)）])', r'<br><br>\1', reason_text)
+            
+            # 保留原有段落
+            reason_text = re.sub(r'\n+', '<br><br>', reason_text)
+            
+            # 讓句號後面增加換行以增加可讀性
+            reason_text = re.sub(r'([。！？])', r'\1<br>', reason_text)
+            
+            judgment_data['reason'] = reason_text
     
     return judgment_data
 

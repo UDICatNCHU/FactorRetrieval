@@ -1,11 +1,20 @@
 {% extends 'layout.html' %}
 
 {% block content %}
+<style>
+    .judgment-text {
+        border-left: none; /* 移除藍色邊框線 */
+    }
+    .card-header-custom {
+        background-color: #08617a; /* 新的背景顏色 */
+        color: #ffffff; /* 文字顏色 */
+    }
+</style>
 <div class="judgment-container">
     <!-- 添加選定因素顯示區塊 -->
     {% if selected_factors %}
     <div class="card border-0 shadow mb-4">
-        <div class="card-header bg-info text-white">
+        <div class="card-header card-header-custom">
             <h3 class="mb-0"><i class="fas fa-filter"></i> 檢索因素</h3>
         </div>
         <div class="card-body">
@@ -23,7 +32,7 @@
     {% endif %}
     
     <div class="card border-0 shadow mb-4">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header card-header-custom">
             <h2 class="mb-0"><i class="fas fa-gavel"></i> 判決詳情 (索引: {{ index }})</h2>
         </div>
         <div class="card-body">
@@ -49,7 +58,7 @@
             </div>
             
             <!-- 判決內容 -->
-            <div class="judgment-section">
+            <div class="judgment-section" style="padding: 20px;">
                 {% if judgment.get('fact') %}
                 <h4 class="judgment-section-title"><i class="fas fa-clipboard-list"></i> 事實</h4>
                 <div class="judgment-text mb-4">{{ judgment.get('fact') | safe }}</div>
