@@ -3,32 +3,51 @@
 {% block content %}
 <style>
     .judgment-text {
-        border-left: none; /* 移除藍色邊框線 */
+        border-left: none;
     }
     .card-header-custom {
-        background-color: #105edc; /* 新的背景顏色 */
-        color: #ffffff; /* 文字顏色 */
+        background-color: #f8f9fa;
+        color: #333;
+        border-bottom: 1px solid #eaeaea;
     }
     .judgment-info-card {
-        background-color: #105edc; /* 新的背景顏色 */
-        color: #ffffff; /* 文字顏色 */
+        background-color: #f8f9fa;
+        color: #333;
         padding: 15px;
-        border-radius: 5px;
+        border-radius: 3px;
+        border: 1px solid #eaeaea;
+    }
+    .factor-badge {
+        background-color: #f8f9fa;
+        border: 1px solid #eaeaea;
+        padding: 8px 12px;
+        border-radius: 3px;
+        display: inline-block;
+    }
+    .judgment-section-title {
+        border-bottom: 1px solid #eaeaea;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+        font-size: 1.2rem;
+    }
+    .card {
+        border-radius: 3px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
 </style>
 <div class="judgment-container">
     <!-- 添加選定因素顯示區塊 -->
     {% if selected_factors %}
-    <div class="card border-0 shadow mb-4">
+    <div class="card border-0 mb-4">
         <div class="card-header card-header-custom">
-            <h3 class="mb-0"><i class="fas fa-filter"></i> 檢索因素</h3>
+            <h3 class="mb-0">檢索因素</h3>
         </div>
         <div class="card-body">
             <div class="row">
                 {% for factor in selected_factors %}
                 <div class="col-md-4 col-sm-6 mb-3">
                     <div class="factor-badge">
-                        <i class="fas fa-check-circle"></i> {{ factor }}
+                        {{ factor }}
                     </div>
                 </div>
                 {% endfor %}
@@ -37,16 +56,16 @@
     </div>
     {% endif %}
     
-    <div class="card border-0 shadow mb-4">
+    <div class="card border-0 mb-4">
         <div class="card-header card-header-custom">
-            <h2 class="mb-0"><i class="fas fa-gavel"></i> 判決詳情 (索引: {{ index }})</h2>
+            <h2 class="mb-0">判決詳情 (索引: {{ index }})</h2>
         </div>
         <div class="card-body">
             <div class="row mb-4">
                 <!-- 判決基本信息 -->
                 <div class="col-md-4 mb-3">
                     <div class="judgment-info-card">
-                        <h5><i class="fas fa-landmark"></i> 法院資訊</h5>
+                        <h5>法院資訊</h5>
                         <p><strong>法院:</strong> {{ judgment.get('court', '未提供') }}</p>
                         <p><strong>案號:</strong> {{ judgment.get('case_number', '未提供') }}</p>
                         <p><strong>日期:</strong> {{ judgment.get('date', '未提供') }}</p>
@@ -56,8 +75,7 @@
                 <!-- 犯罪類型和結果 -->
                 <div class="col-md-8 mb-3">
                     <div class="judgment-info-card">
-                        <h5><i class="fas fa-balance-scale"></i> 判決結果</h5>
-                        <!-- <p><strong>主要犯罪類型:</strong> {{ judgment.get('crime_type', '未提供') }}</p> -->
+                        <h5>判決結果</h5>
                         <p class="sentence-result">{{ judgment.get('mainText', '判決結果未提供') }}</p>
                     </div>
                 </div>
@@ -66,17 +84,17 @@
             <!-- 判決內容 -->
             <div class="judgment-section" style="padding: 20px;">
                 {% if judgment.get('fact') %}
-                <h4 class="judgment-section-title"><i class="fas fa-clipboard-list"></i> 事實</h4>
+                <h4 class="judgment-section-title">事實</h4>
                 <div class="judgment-text mb-4">{{ judgment.get('fact') | safe }}</div>
                 {% endif %}
                 
                 {% if judgment.get('reason') %}
-                <h4 class="judgment-section-title"><i class="fas fa-lightbulb"></i> 理由</h4>
+                <h4 class="judgment-section-title">理由</h4>
                 <div class="judgment-text mb-4">{{ judgment.get('reason') | safe }}</div>
                 {% endif %}
                 
                 {% if not judgment.get('fact') and not judgment.get('reason') and judgment.get('content') %}
-                <h4 class="judgment-section-title"><i class="fas fa-file-alt"></i> 判決全文</h4>
+                <h4 class="judgment-section-title">判決全文</h4>
                 <div class="judgment-text mb-4">{{ judgment.get('content') | safe }}</div>
                 {% endif %}
             </div>
@@ -84,11 +102,11 @@
     </div>
     
     <div class="text-center mt-4 mb-5">
-        <a href="javascript:history.back()" class="btn btn-secondary me-2">
-            <i class="fas fa-arrow-left"></i> 返回結果列表
+        <a href="javascript:history.back()" class="btn btn-outline-secondary me-2">
+            返回結果列表
         </a>
-        <a href="{{ url_for('index') }}" class="btn btn-primary">
-            <i class="fas fa-home"></i> 返回首頁
+        <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
+            返回首頁
         </a>
     </div>
 </div>
