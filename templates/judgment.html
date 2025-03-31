@@ -34,6 +34,28 @@
         border-radius: 3px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
+    
+    /* Mermaid 圖表樣式 */
+    .mermaid {
+        padding: 10px;
+        background-color: white;
+        overflow-x: auto;
+        text-align: center;
+    }
+    
+    /* 人物關係摺疊表樣式 */
+    details summary {
+        cursor: pointer;
+        padding: 8px;
+        background-color: #f8f9fa;
+        border: 1px solid #eaeaea;
+        border-radius: 4px;
+        font-weight: bold;
+    }
+    
+    details[open] summary {
+        margin-bottom: 10px;
+    }
 </style>
 <div class="judgment-container">
     <!-- 添加選定因素顯示區塊 -->
@@ -101,6 +123,30 @@
         </div>
     </div>
     
+    {% if judgment.get('content') or judgment.get('fact') or judgment.get('reason') %}
+    <div class="card border-0 mb-4">
+        <div class="card-header card-header-custom">
+            <h3 class="mb-0">
+                <i class="fas fa-users"></i> 人物關係萃取
+                <button class="btn btn-sm btn-outline-primary float-end" id="extractBtn" onclick="extractRelations()">
+                    <i class="fas fa-bolt"></i> 使用 Gemini 萃取
+                </button>
+            </h3>
+        </div>
+        <div class="card-body">
+            <div id="loadingExtract" style="display:none;" class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">萃取中...</span>
+                </div>
+                <p class="mt-2">正在使用 Gemini AI 萃取判決書中的人物關係，請稍候...</p>
+            </div>
+            <div id="extractResult" class="p-3">
+                <p class="text-center text-muted">點擊「使用 Gemini 萃取」按鈕開始分析判決書中的人物關係</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="text-center mt-4 mb-5">
         <a href="javascript:history.back()" class="btn btn-outline-secondary me-2">
             返回結果列表
@@ -110,4 +156,156 @@
         </a>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function extractRelations() {
+    const judgmentId = {{ index }};
+    const extractBtn = document.getElementById('extractBtn');
+    const loadingDiv = document.getElementById('loadingExtract');
+    const resultDiv = document.getElementById('extractResult');
+    
+    // 判斷要分析的內容
+    let judgmentText = "";
+    {% if judgment.get('fact') %}
+        judgmentText += "{{ judgment.get('fact') | replace('\n', ' ') | replace('"', '\\"') | safe }}";
+    {% endif %}
+    {% if judgment.get('reason') %}
+        judgmentText += "{{ judgment.get('reason') | replace('\n', ' ') | replace('"', '\\"') | safe }}";
+    {% endif %}
+    {% if not judgment.get('fact') and not judgment.get('reason') and judgment.get('content') %}
+        judgmentText += "{{ judgment.get('content') | replace('\n', ' ') | replace('"', '\\"') | safe }}";
+    {% endif %}
+    
+    // 如果文本太長，只取前5000字
+    if (judgmentText.length > 5000) {
+        judgmentText = judgmentText.substring(0, 5000) + "...";
+    }
+    
+    // 顯示載入中
+    extractBtn.disabled = true;
+    loadingDiv.style.display = 'block';
+    resultDiv.innerHTML = '';
+    
+    // 發送API請求到後端
+    fetch("{{ url_for('extract_relations') }}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            judgment_id: judgmentId,
+            judgment_text: judgmentText
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('API請求失敗');
+        }
+        return response.json();
+    })
+    .then(data => {
+        loadingDiv.style.display = 'none';
+        extractBtn.disabled = false;
+        
+        if (data.error) {
+            resultDiv.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+            return;
+        }
+        
+        // 顯示結果
+        let resultHtml = `<h4 class="mb-3">萃取結果</h4>`;
+        
+        // 使用 Mermaid 圖表顯示人物關係
+        if (data.relations && data.relations.length > 0) {
+            // 創建 Mermaid 流程圖
+            let mermaidCode = 'flowchart LR\n';
+            
+            // 創建節點
+            let nodes = new Set();
+            data.relations.forEach(relation => {
+                nodes.add(relation.person1);
+                nodes.add(relation.person2);
+            });
+            
+            // 添加節點定義
+            let nodeIndex = 0;
+            let nodeMap = {};
+            nodes.forEach(node => {
+                let id = `node${nodeIndex++}`;
+                nodeMap[node] = id;
+                mermaidCode += `    ${id}["${node}"]\n`;
+            });
+            
+            // 添加關係連線
+            data.relations.forEach(relation => {
+                let fromId = nodeMap[relation.person1];
+                let toId = nodeMap[relation.person2];
+                mermaidCode += `    ${fromId} -->|${relation.relation}| ${toId}\n`;
+            });
+            
+            // 添加 Mermaid 圖表到結果
+            resultHtml += `
+                <div class="card mb-4">
+                    <div class="card-header card-header-custom">
+                        <h5 class="mb-0">人物關係圖</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mermaid">
+${mermaidCode}
+                        </div>
+                    </div>
+                </div>`;
+        }
+        
+        // 添加人物列表 (保持原樣)
+        if (data.persons && data.persons.length > 0) {
+            resultHtml += `<h5 class="mb-2">人物列表</h5>
+                <div class="row mb-3">`;
+            data.persons.forEach(person => {
+                resultHtml += `<div class="col-md-4 mb-2">
+                    <div class="person-card p-2 border rounded">
+                        <strong>${person.name}</strong>
+                        <p class="small text-muted mb-0">${person.role || '未知角色'}</p>
+                    </div>
+                </div>`;
+            });
+            resultHtml += `</div>`;
+        }
+        
+        // 添加AI分析摘要 (保持原樣)
+        if (data.summary) {
+            resultHtml += `<div class="mt-3">
+                <h5>案情人物關係摘要</h5>
+                <div class="p-3 bg-light rounded">${data.summary}</div>
+            </div>`;
+        }
+        
+        resultDiv.innerHTML = resultHtml;
+        
+        // 重新初始化 Mermaid 以渲染新添加的圖表
+        if (window.mermaid) {
+            window.mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        loadingDiv.style.display = 'none';
+        extractBtn.disabled = false;
+        resultDiv.innerHTML = `<div class="alert alert-danger">萃取過程中發生錯誤: ${error.message}</div>`;
+    });
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+    mermaid.initialize({
+        startOnLoad: true,
+        theme: 'neutral',
+        flowchart: {
+            curve: 'basis',
+            htmlLabels: true
+        }
+    });
+</script>
 {% endblock %}

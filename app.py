@@ -3,7 +3,10 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 import json
 import os
 import re
+import requests
 
+
+os.environ['GEMINI_API_KEY'] = "AIzaSyCmr5YKCPbqmOztbJtwfOdGhYBDT8aEt6k"
 app = Flask(__name__, static_folder='static')
 app.secret_key = 'your_secret_key'  # 用於flash消息
 
@@ -435,6 +438,109 @@ def debug_info():
             info["inverted_index_error"] = str(e)
     
     return jsonify(info)
+
+# 添加 Gemini API 支持
+@app.route('/extract_relations', methods=['POST'])
+def extract_relations():
+    data = request.json
+    judgment_id = data.get('judgment_id')
+    judgment_text = data.get('judgment_text')
+    
+    if not judgment_text:
+        return jsonify({'error': '沒有提供判決文本'})
+    
+    # Gemini API的URL和金鑰
+    api_key = os.environ.get('GEMINI_API_KEY', '')
+    if not api_key:
+        return jsonify({'error': 'Gemini API金鑰未設置'})
+    
+    # 修正完整的 API URL
+    api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+    
+    # 構建提示
+    prompt = f"""
+    請從以下判決書中萃取所有人物及其關係。以繁體中文回應，不要包含任何額外解釋或前言。
+    
+    判決書內容:
+    {judgment_text}
+    
+    請以JSON格式回覆，包含以下資訊:
+    1. persons: 人物列表，每個人包含姓名(name)和角色(role)
+    2. relations: 人物關係列表，每個關係包含人物1(person1)、關係類型(relation)和人物2(person2)
+    3. summary: 簡短摘要，說明本案中重要的人物關係
+    """
+    
+    try:
+        headers = {
+            "Content-Type": "application/json",
+        }
+        
+        payload = {
+            "contents": [{"parts":[{"text": prompt}]}],
+            "generationConfig": {
+                "temperature": 0.2,
+                "maxOutputTokens": 1024
+            }
+        }
+        
+        # 添加 API 金鑰作為 URL 參數
+        response = requests.post(
+            f"{api_url}?key={api_key}",
+            headers=headers,
+            json=payload
+        )
+        
+        # 記錄 API 回應狀態碼，幫助診斷
+        print(f"Gemini API 回應狀態碼: {response.status_code}")
+        
+        if response.status_code != 200:
+            error_text = response.text[:500] if response.text else "無錯誤訊息"
+            print(f"API錯誤詳情: {error_text}")
+            return jsonify({'error': f'API回應錯誤: {response.status_code}'})
+        
+        response_data = response.json()
+        print("收到 Gemini 回應")
+        
+        # 解析Gemini的回應
+        if 'candidates' in response_data and response_data['candidates']:
+            content = response_data['candidates'][0]['content']
+            if 'parts' in content and content['parts']:
+                text_response = content['parts'][0]['text']
+                print(f"Gemini 回應內容: {text_response[:200]}...")
+                
+                # 嘗試從回應中提取JSON
+                try:
+                    # 查找並提取JSON部分
+                    json_start = text_response.find('{')
+                    json_end = text_response.rfind('}') + 1
+                    
+                    if json_start >= 0 and json_end > json_start:
+                        json_str = text_response[json_start:json_end]
+                        extracted_data = json.loads(json_str)
+                        return jsonify(extracted_data)
+                    else:
+                        print("未找到JSON格式內容，回傳純文本")
+                        # 如果沒有找到JSON，返回整個文本
+                        return jsonify({
+                            'summary': text_response,
+                            'persons': [],
+                            'relations': []
+                        })
+                        
+                except json.JSONDecodeError as e:
+                    print(f"JSON解析錯誤: {e}")
+                    return jsonify({
+                        'summary': text_response,
+                        'persons': [],
+                        'relations': []
+                    })
+        
+        print("無法從回應中解析出有用內容")
+        return jsonify({'error': '無法從Gemini回應中提取有用資訊'})
+        
+    except Exception as e:
+        print(f"處理請求發生異常: {e}")
+        return jsonify({'error': f'處理請求時發生錯誤: {str(e)}'})
 
 if __name__ == '__main__':
     print("應用程式啟動中...")
