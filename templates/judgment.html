@@ -80,7 +80,7 @@
     
     <div class="card border-0 mb-4">
         <div class="card-header card-header-custom">
-            <h2 class="mb-0">判決詳情 (索引: {{ index }})</h2>
+            <h3 class="mb-0">判決詳情 </h3>
         </div>
         <div class="card-body">
             <div class="row mb-4">
@@ -129,7 +129,7 @@
             <h3 class="mb-0">
                 <i class="fas fa-users"></i> 人物關係萃取
                 <button class="btn btn-sm btn-outline-primary float-end" id="extractBtn" onclick="extractRelations()">
-                    <i class="fas fa-bolt"></i> 使用 Gemini 萃取
+                    <i class="fas fa-bolt"></i> 案件視覺化
                 </button>
             </h3>
         </div>
@@ -141,7 +141,7 @@
                 <p class="mt-2">正在使用 Gemini AI 萃取判決書中的人物關係，請稍候...</p>
             </div>
             <div id="extractResult" class="p-3">
-                <p class="text-center text-muted">點擊「使用 Gemini 萃取」按鈕開始分析判決書中的人物關係</p>
+                <p class="text-center text-muted">點擊「案件視覺化」按鈕開始分析判決書中的人物關係</p>
             </div>
         </div>
     </div>
@@ -229,21 +229,82 @@ function extractRelations() {
                 nodes.add(relation.person2);
             });
             
-            // 添加節點定義
+            // 建立人物屬性對照表
+            let personAttributes = {};
+            if (data.persons && data.persons.length > 0) {
+                data.persons.forEach(person => {
+                    personAttributes[person.name] = {
+                        role: person.role || '',
+                        attributes: person.attributes || [],
+                        description: person.description || ''
+                    };
+                });
+            }
+            
+            // 添加節點定義，包含屬性資訊
             let nodeIndex = 0;
             let nodeMap = {};
             nodes.forEach(node => {
                 let id = `node${nodeIndex++}`;
                 nodeMap[node] = id;
-                mermaidCode += `    ${id}["${node}"]\n`;
+                
+                // 節點標籤 - 避免特殊字符問題
+                let nodeName = node.replace(/"/g, '&quot;');
+                
+                // 基本節點標籤只包含名稱
+                let nodeLabel = nodeName;
+                
+                // 根據角色添加不同樣式
+                let nodeStyle = '';
+                if (personAttributes[node] && personAttributes[node].role) {
+                    const role = personAttributes[node].role.toLowerCase();
+                    if (role.includes('被告') || role.includes('犯人') || role.includes('加害人')) {
+                        nodeStyle = ':::defendant';
+                    } else if (role.includes('被害人') || role.includes('被害者') || role.includes('受害人')) {
+                        nodeStyle = ':::victim';
+                    } else if (role.includes('證人')) {
+                        nodeStyle = ':::witness';
+                    }
+                }
+                
+                // 添加基本節點
+                mermaidCode += `    ${id}["${nodeLabel}"]${nodeStyle}\n`;
+                
+                // 如果有角色資訊，添加子節點顯示角色
+                if (personAttributes[node] && personAttributes[node].role) {
+                    let roleId = `${id}_role`;
+                    let roleLabel = personAttributes[node].role.replace(/"/g, '&quot;');
+                    mermaidCode += `    ${roleId}["${roleLabel}"]\n`;
+                    mermaidCode += `    ${id} -.- ${roleId}\n`;
+                }
+                
+                // 如果有屬性資訊，添加子節點顯示屬性
+                if (personAttributes[node] && personAttributes[node].attributes && 
+                    personAttributes[node].attributes.length > 0) {
+                    let attrId = `${id}_attr`;
+                    // 最多顯示2個屬性
+                    let attrLabel = personAttributes[node].attributes.slice(0, 2)
+                        .join('<br>').replace(/"/g, '&quot;');
+                    if (attrLabel) {
+                        mermaidCode += `    ${attrId}["${attrLabel}"]\n`;
+                        mermaidCode += `    ${id} -.- ${attrId}\n`;
+                    }
+                }
             });
             
             // 添加關係連線
             data.relations.forEach(relation => {
                 let fromId = nodeMap[relation.person1];
                 let toId = nodeMap[relation.person2];
-                mermaidCode += `    ${fromId} -->|${relation.relation}| ${toId}\n`;
+                // 避免關係標籤中的特殊字符
+                let relationLabel = relation.relation.replace(/"/g, '&quot;');
+                mermaidCode += `    ${fromId} -->|"${relationLabel}"|${toId}\n`;
             });
+            
+            // 添加 CSS 樣式定義
+            mermaidCode += `    classDef defendant fill:#ffecec,stroke:#ff8080,stroke-width:2px\n`;
+            mermaidCode += `    classDef victim fill:#e9f5ff,stroke:#68b3ff,stroke-width:2px\n`;
+            mermaidCode += `    classDef witness fill:#f0f8eb,stroke:#a4d586,stroke-width:2px\n`;
             
             // 添加 Mermaid 圖表到結果
             resultHtml += `
@@ -252,26 +313,93 @@ function extractRelations() {
                         <h5 class="mb-0">人物關係圖</h5>
                     </div>
                     <div class="card-body">
-                        <div class="mermaid">
+                        <pre class="mermaid">
 ${mermaidCode}
-                        </div>
+                        </pre>
                     </div>
                 </div>`;
+            
+            // 保留原始關係列表，添加折疊區段
+            resultHtml += `
+                <details class="mb-4">
+                    <summary class="mb-2">顯示/隱藏人物關係列表</summary>
+                    <div class="relationship-chart p-3 border rounded">`;
+            data.relations.forEach(relation => {
+                let context = relation.context ? `<br><small class="text-muted">${relation.context}</small>` : '';
+                resultHtml += `<div class="relation-item mb-2">
+                    <span class="person-name">${relation.person1}</span>
+                    <span class="relation-arrow mx-2">→</span>
+                    <span class="relation-type badge bg-secondary">${relation.relation}</span>
+                    <span class="relation-arrow mx-2">→</span>
+                    <span class="person-name">${relation.person2}</span>
+                    ${context}
+                </div>`;
+            });
+            resultHtml += `</div></details>`;
         }
         
-        // 添加人物列表 (保持原樣)
+        // 添加人物列表，顯示更多屬性
         if (data.persons && data.persons.length > 0) {
             resultHtml += `<h5 class="mb-2">人物列表</h5>
                 <div class="row mb-3">`;
             data.persons.forEach(person => {
-                resultHtml += `<div class="col-md-4 mb-2">
-                    <div class="person-card p-2 border rounded">
-                        <strong>${person.name}</strong>
-                        <p class="small text-muted mb-0">${person.role || '未知角色'}</p>
+                // 構建屬性列表
+                let attributeHtml = '';
+                if (person.attributes && person.attributes.length > 0) {
+                    attributeHtml = `<ul class="list-unstyled mb-0 small">`;
+                    person.attributes.forEach(attr => {
+                        attributeHtml += `<li><i class="fas fa-angle-right text-muted me-1"></i>${attr}</li>`;
+                    });
+                    attributeHtml += `</ul>`;
+                }
+                
+                // 顯示描述（如果有）
+                let descriptionHtml = '';
+                if (person.description) {
+                    descriptionHtml = `<p class="small text-muted mt-2 mb-0">${person.description}</p>`;
+                }
+                
+                // 根據角色添加不同樣式
+                let cardClass = 'border';
+                if (person.role) {
+                    const role = person.role.toLowerCase();
+                    if (role.includes('被告') || role.includes('犯人')) {
+                        cardClass = 'border-danger';
+                    } else if (role.includes('被害人') || role.includes('受害人')) {
+                        cardClass = 'border-primary';
+                    } else if (role.includes('證人')) {
+                        cardClass = 'border-success';
+                    }
+                }
+                
+                resultHtml += `<div class="col-md-4 mb-3">
+                    <div class="person-card p-3 border rounded ${cardClass}">
+                        <div class="d-flex justify-content-between">
+                            <strong>${person.name}</strong>
+                            <span class="badge ${getRoleBadgeClass(person.role)}">${person.role || '未知角色'}</span>
+                        </div>
+                        ${attributeHtml}
+                        ${descriptionHtml}
                     </div>
                 </div>`;
             });
             resultHtml += `</div>`;
+        }
+
+        // 輔助函數：根據角色返回適當的 badge 類別
+        function getRoleBadgeClass(role) {
+            if (!role) return 'bg-secondary';
+            
+            role = role.toLowerCase();
+            if (role.includes('被告') || role.includes('犯人') || role.includes('加害人')) {
+                return 'bg-danger';
+            } else if (role.includes('被害人') || role.includes('受害人')) {
+                return 'bg-primary';
+            } else if (role.includes('證人')) {
+                return 'bg-success';
+            } else {
+                return 'bg-secondary';
+            }
         }
         
         // 添加AI分析摘要 (保持原樣)

@@ -460,13 +460,23 @@ def extract_relations():
     # 構建提示
     prompt = f"""
     請從以下判決書中萃取所有人物及其關係。以繁體中文回應，不要包含任何額外解釋或前言。
-    
+
     判決書內容:
     {judgment_text}
-    
+
     請以JSON格式回覆，包含以下資訊:
-    1. persons: 人物列表，每個人包含姓名(name)和角色(role)
-    2. relations: 人物關係列表，每個關係包含人物1(person1)、關係類型(relation)和人物2(person2)
+    1. persons: 人物列表，每個人包含以下屬性：
+       - name: 姓名
+       - role: 角色（如被告、被害人、證人）
+       - attributes: 屬性列表，包括年齡段（如「14歲以上未滿16歲」、「成年人」）、性別、身份（如「教師」、「學生」）等關鍵描述
+       - description: 簡短描述，總結此人物在案件中的重要特徵
+
+    2. relations: 人物關係列表，每個關係包含：
+       - person1: 關係主體
+       - relation: 關係類型
+       - person2: 關係客體
+       - context: 關係的簡短描述或背景（如有）
+
     3. summary: 簡短摘要，說明本案中重要的人物關係
     """
     

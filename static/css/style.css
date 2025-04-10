@@ -340,3 +340,37 @@ footer {
         font-size: 16px;
     }
 }
+
+/* 人物卡片樣式 */
+.person-card {
+    height: 100%;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.person-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.person-card.border-danger {
+    border-left-width: 4px !important;
+}
+
+.person-card.border-primary {
+    border-left-width: 4px !important;
+}
+
+.person-card.border-success {
+    border-left-width: 4px !important;
+}
+
+/* Mermaid 樣式修正 */
+.mermaid .label {
+    font-family: 'Noto Sans TC', sans-serif;
+}
+
+.relation-item {
+    padding: 8px 12px;
+    border-radius: 4px;
+    background-color: #f9f9f9;
+}
