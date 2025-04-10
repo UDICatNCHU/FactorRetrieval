@@ -6,7 +6,7 @@ import re
 import requests
 
 
-os.environ['GEMINI_API_KEY'] = "AIzaSyCmr5YKCPbqmOztbJtwfOdGhYBDT8aEt6k"
+os.environ['GEMINI_API_KEY'] = "key"
 app = Flask(__name__, static_folder='static')
 app.secret_key = 'your_secret_key'  # 用於flash消息
 
